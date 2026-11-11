@@ -1,0 +1,1401 @@
+{
+  "uid": "ultrasonic-weather-station-basis-full",
+  "title": "[basis] vostochnoe / first_pear_nursery — ultrasonic_weather_station_01",
+  "description": "Измерения станции и Open-Meteo для координат активной сети Wi-Fi. Модель и датчик разделены по node_id.",
+  "tags": [
+    "tenant:basis",
+    "region:vostochnoe",
+    "fleet:first_pear_nursery",
+    "sensor:ultrasonic_weather_station_01",
+    "wifi",
+    "weather"
+  ],
+  "timezone": "Europe/Moscow",
+  "schemaVersion": 39,
+  "version": 8,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "МЕТЕОСТАНЦИЯ / OPEN-METEO",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+  "content": "### Измерения рядом с моделью погоды\n**🟢 Станция** · ultrasonic_weather_station_01　　**🟠 Open-Meteo** · ultrasonic_weather_station_01 · 55.797734, 37.570917"
+      }
+    },
+    {
+      "id": 6,
+      "title": "Станция · ветер сейчас",
+      "type": "volkovlabs-echarts-panel",
+      "gridPos": {
+        "x": 0,
+        "y": 10,
+        "w": 6,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "renderer": "svg",
+        "editorMode": "code",
+        "map": "none",
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "getOption": "// Business Charts 6.6: responsive wind compass, north fixed at the top.\n// The arrow points to the station's bearing, including 0 degrees at zero speed.\nconst latest = (name) => {\n  for (const frame of context.panel.data.series) {\n    const field = frame.fields.find((item) => item.name === name);\n    if (!field) continue;\n    const value = field.values[field.values.length - 1];\n    if (value !== null && value !== undefined && Number.isFinite(Number(value))) return Number(value);\n  }\n  return null;\n};\nconst speed = latest('wind_speed_ms');\nconst rawDirection = latest('wind_direction_deg');\nconst direction = rawDirection === null ? null : ((rawDirection % 360) + 360) % 360;\nconst width = context.panel.chart.getWidth();\nconst height = context.panel.chart.getHeight();\nconst radius = Math.max(12, Math.min(width / 2.7, height / 3.15));\nconst cx = width / 2;\nconst cy = height / 2 - radius * 0.10;\nconst dark = context.grafana.theme.isDark;\nconst foreground = dark ? '#f0f7ff' : '#163651';\nconst muted = dark ? '#91b9dc' : '#406888';\nconst dial = dark ? '#172e45' : '#e7f2fb';\nconst elements = [];\nconst line = (x1, y1, x2, y2, stroke, lineWidth) => ({\n  type: 'line', silent: true, shape: { x1, y1, x2, y2 }, style: { stroke, lineWidth, lineCap: 'round' },\n});\nconst text = (x, y, value, size, color, weight = 600) => ({\n  type: 'text', silent: true, style: {\n    x, y, text: value, fill: color, font: `${weight} ${size}px sans-serif`, align: 'center', verticalAlign: 'middle',\n  },\n});\nelements.push({ type: 'circle', silent: true, shape: { cx, cy, r: radius }, style: { fill: dial, stroke: muted, lineWidth: 1, opacity: 0.65 } });\nfor (let tick = 0; tick < 72; tick++) {\n  const angle = tick * Math.PI / 36;\n  const major = tick % 18 === 0;\n  const inner = radius * (major ? 0.84 : tick % 3 === 0 ? 0.89 : 0.94);\n  elements.push(line(cx + inner * Math.sin(angle), cy - inner * Math.cos(angle),\n    cx + radius * Math.sin(angle), cy - radius * Math.cos(angle), muted, major ? 2.5 : 1));\n}\nconst labelSize = Math.max(12, Math.min(26, radius * 0.18));\nfor (const [label, x, y] of [['С', 0, -1.17], ['В', 1.17, 0], ['Ю', 0, 1.17], ['З', -1.17, 0]]) {\n  elements.push(text(cx + x * radius, cy + y * radius, label, labelSize, foreground));\n}\nif (direction !== null) {\n  const angle = direction * Math.PI / 180;\n  const dx = Math.sin(angle), dy = -Math.cos(angle);\n  const tipX = cx + dx * radius * 0.78, tipY = cy + dy * radius * 0.78;\n  const tailX = cx - dx * radius * 0.78, tailY = cy - dy * radius * 0.78;\n  elements.push(line(tailX, tailY, tipX, tipY, foreground, Math.max(2, radius * 0.025)));\n  const backX = tipX - dx * radius * 0.13, backY = tipY - dy * radius * 0.13;\n  elements.push({ type: 'polygon', silent: true, shape: { points: [\n    [tipX, tipY], [backX - dy * radius * 0.065, backY + dx * radius * 0.065],\n    [backX + dy * radius * 0.065, backY - dx * radius * 0.065],\n  ] }, style: { fill: foreground } });\n  elements.push({ type: 'circle', silent: true, shape: { cx: tailX, cy: tailY, r: radius * 0.045 }, style: { fill: foreground } });\n}\nelements.push({ type: 'circle', silent: true, shape: { cx, cy, r: radius * 0.34 }, style: { fill: dial } });\nconst numberSize = Math.max(15, Math.min(48, radius * 0.30));\nconst speedText = speed === null ? '—' : speed.toLocaleString('ru-RU', { maximumFractionDigits: 1 });\nelements.push(text(cx, cy - radius * 0.07, speedText, numberSize, foreground, 700));\nelements.push(text(cx, cy + radius * 0.17, 'м/с', Math.max(10, numberSize * 0.55), foreground));\nelements.push(text(cx, cy + radius * 1.47, direction === null ? 'Нет направления' : `${Math.round(direction) % 360}°`, labelSize, muted));\nreturn { animation: false, backgroundColor: 'transparent', tooltip: { show: false }, graphic: elements };\n"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH s AS (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_speed_ms' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1), d AS (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_direction_deg' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) SELECT (SELECT value FROM s)::double precision AS wind_speed_ms,(SELECT value FROM d)::double precision AS wind_direction_deg"
+        }
+      ],
+      "description": "Метеорологическое направление: откуда дует ветер. При штиле направление малоинформативно. Данные старше 2 часов скрыты."
+    },
+    {
+      "id": 7,
+      "title": "Open-Meteo · ветер сейчас",
+      "type": "volkovlabs-echarts-panel",
+      "gridPos": {
+        "x": 6,
+        "y": 10,
+        "w": 6,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "renderer": "svg",
+        "editorMode": "code",
+        "map": "none",
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "getOption": "// Business Charts 6.6: responsive wind compass, north fixed at the top.\n// The arrow points to the station's bearing, including 0 degrees at zero speed.\nconst latest = (name) => {\n  for (const frame of context.panel.data.series) {\n    const field = frame.fields.find((item) => item.name === name);\n    if (!field) continue;\n    const value = field.values[field.values.length - 1];\n    if (value !== null && value !== undefined && Number.isFinite(Number(value))) return Number(value);\n  }\n  return null;\n};\nconst speed = latest('wind_speed_ms');\nconst rawDirection = latest('wind_direction_deg');\nconst direction = rawDirection === null ? null : ((rawDirection % 360) + 360) % 360;\nconst width = context.panel.chart.getWidth();\nconst height = context.panel.chart.getHeight();\nconst radius = Math.max(12, Math.min(width / 2.7, height / 3.15));\nconst cx = width / 2;\nconst cy = height / 2 - radius * 0.10;\nconst dark = context.grafana.theme.isDark;\nconst foreground = dark ? '#f0f7ff' : '#163651';\nconst muted = dark ? '#91b9dc' : '#406888';\nconst dial = dark ? '#172e45' : '#e7f2fb';\nconst elements = [];\nconst line = (x1, y1, x2, y2, stroke, lineWidth) => ({\n  type: 'line', silent: true, shape: { x1, y1, x2, y2 }, style: { stroke, lineWidth, lineCap: 'round' },\n});\nconst text = (x, y, value, size, color, weight = 600) => ({\n  type: 'text', silent: true, style: {\n    x, y, text: value, fill: color, font: `${weight} ${size}px sans-serif`, align: 'center', verticalAlign: 'middle',\n  },\n});\nelements.push({ type: 'circle', silent: true, shape: { cx, cy, r: radius }, style: { fill: dial, stroke: muted, lineWidth: 1, opacity: 0.65 } });\nfor (let tick = 0; tick < 72; tick++) {\n  const angle = tick * Math.PI / 36;\n  const major = tick % 18 === 0;\n  const inner = radius * (major ? 0.84 : tick % 3 === 0 ? 0.89 : 0.94);\n  elements.push(line(cx + inner * Math.sin(angle), cy - inner * Math.cos(angle),\n    cx + radius * Math.sin(angle), cy - radius * Math.cos(angle), muted, major ? 2.5 : 1));\n}\nconst labelSize = Math.max(12, Math.min(26, radius * 0.18));\nfor (const [label, x, y] of [['С', 0, -1.17], ['В', 1.17, 0], ['Ю', 0, 1.17], ['З', -1.17, 0]]) {\n  elements.push(text(cx + x * radius, cy + y * radius, label, labelSize, foreground));\n}\nif (direction !== null) {\n  const angle = direction * Math.PI / 180;\n  const dx = Math.sin(angle), dy = -Math.cos(angle);\n  const tipX = cx + dx * radius * 0.78, tipY = cy + dy * radius * 0.78;\n  const tailX = cx - dx * radius * 0.78, tailY = cy - dy * radius * 0.78;\n  elements.push(line(tailX, tailY, tipX, tipY, foreground, Math.max(2, radius * 0.025)));\n  const backX = tipX - dx * radius * 0.13, backY = tipY - dy * radius * 0.13;\n  elements.push({ type: 'polygon', silent: true, shape: { points: [\n    [tipX, tipY], [backX - dy * radius * 0.065, backY + dx * radius * 0.065],\n    [backX + dy * radius * 0.065, backY - dx * radius * 0.065],\n  ] }, style: { fill: foreground } });\n  elements.push({ type: 'circle', silent: true, shape: { cx: tailX, cy: tailY, r: radius * 0.045 }, style: { fill: foreground } });\n}\nelements.push({ type: 'circle', silent: true, shape: { cx, cy, r: radius * 0.34 }, style: { fill: dial } });\nconst numberSize = Math.max(15, Math.min(48, radius * 0.30));\nconst speedText = speed === null ? '—' : speed.toLocaleString('ru-RU', { maximumFractionDigits: 1 });\nelements.push(text(cx, cy - radius * 0.07, speedText, numberSize, foreground, 700));\nelements.push(text(cx, cy + radius * 0.17, 'м/с', Math.max(10, numberSize * 0.55), foreground));\nelements.push(text(cx, cy + radius * 1.47, direction === null ? 'Нет направления' : `${Math.round(direction) % 360}°`, labelSize, muted));\nreturn { animation: false, backgroundColor: 'transparent', tooltip: { show: false }, graphic: elements };\n"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH s AS (SELECT ts_time AS time, value/3.6 AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='wind_speed_10m_ms' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1), d AS (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='wind_dir_10m_deg' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) SELECT (SELECT value FROM s)::double precision AS wind_speed_ms,(SELECT value FROM d)::double precision AS wind_direction_deg"
+        }
+      ],
+      "description": "Метеорологическое направление: откуда дует ветер. При штиле направление малоинформативно. Данные старше 2 часов скрыты."
+    },
+    {
+      "id": 8,
+      "title": "Разница последних показаний",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 10,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "lg",
+        "footer": {
+          "show": false
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH v AS (SELECT 'Температура, °C' AS \"Показатель\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_temperature_c' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) s) AS \"Станция\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='temp_c' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) o) AS \"Open-Meteo\" UNION ALL SELECT 'Влажность, %' AS \"Показатель\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='relative_humidity_pct' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) s) AS \"Станция\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='rel_humidity_pct' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) o) AS \"Open-Meteo\" UNION ALL SELECT 'Давление, гПа' AS \"Показатель\",(SELECT value FROM (SELECT ts_time AS time, value*10 AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_pressure_kpa' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) s) AS \"Станция\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='surface_pressure_hpa' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) o) AS \"Open-Meteo\" UNION ALL SELECT 'Скорость ветра, м/с' AS \"Показатель\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_speed_ms' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) s) AS \"Станция\",(SELECT value FROM (SELECT ts_time AS time, value/3.6 AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='wind_speed_10m_ms' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) o) AS \"Open-Meteo\") SELECT *, \"Станция\"-\"Open-Meteo\" AS \"Δ станция − модель\" FROM v"
+        }
+      ],
+      "description": "Последние значения каждого источника (не синхронные). Для оценки за период используйте таблицу ниже. Разница влажности — процентные пункты."
+    },
+    {
+      "id": 9,
+      "title": "Температура · станция и Open-Meteo",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "min": -20,
+          "max": 30,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": 2700000,
+            "insertNulls": 2700000,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Станция"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56D9C9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Open-Meteo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FFB357"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts_time AS time,value AS value,'Станция'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_temperature_c' AND $__timeFilter(ts_time) UNION ALL SELECT ts_time AS time,value AS value,'Open-Meteo'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='temp_c' AND $__timeFilter(ts_time) ORDER BY time"
+        }
+      ],
+      "interval": "20m",
+      "description": "Зелёная сплошная — станция, оранжевая пунктирная — модель. Время модели — время получения API в существующем сборщике. Пропуски более 45 минут разрывают линию."
+    },
+    {
+      "id": 10,
+      "title": "Влажность · станция и Open-Meteo",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 19,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": 2700000,
+            "insertNulls": 2700000,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Станция"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56D9C9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Open-Meteo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FFB357"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts_time AS time,value AS value,'Станция'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='relative_humidity_pct' AND $__timeFilter(ts_time) UNION ALL SELECT ts_time AS time,value AS value,'Open-Meteo'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='rel_humidity_pct' AND $__timeFilter(ts_time) ORDER BY time"
+        }
+      ],
+      "interval": "20m",
+      "description": "Зелёная сплошная — станция, оранжевая пунктирная — модель. Время модели — время получения API в существующем сборщике. Пропуски более 45 минут разрывают линию."
+    },
+    {
+      "id": 11,
+      "title": "Давление · станция и Open-Meteo",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurehpa",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": 2700000,
+            "insertNulls": 2700000,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Станция"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56D9C9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Open-Meteo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FFB357"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts_time AS time,value*10 AS value,'Станция'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_pressure_kpa' AND $__timeFilter(ts_time) UNION ALL SELECT ts_time AS time,value AS value,'Open-Meteo'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='surface_pressure_hpa' AND $__timeFilter(ts_time) ORDER BY time"
+        }
+      ],
+      "interval": "20m",
+      "description": "Зелёная сплошная — станция, оранжевая пунктирная — модель. Время модели — время получения API в существующем сборщике. Пропуски более 45 минут разрывают линию. Давление у поверхности: кПа станции × 10 = гПа."
+    },
+    {
+      "id": 12,
+      "title": "Скорость ветра · станция и Open-Meteo",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 12,
+        "y": 28,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocityms",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": 2700000,
+            "insertNulls": 2700000,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Станция"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56D9C9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Open-Meteo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FFB357"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts_time AS time,value AS value,'Станция'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_speed_ms' AND $__timeFilter(ts_time) UNION ALL SELECT ts_time AS time,value/3.6 AS value,'Open-Meteo'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='wind_speed_10m_ms' AND $__timeFilter(ts_time) ORDER BY time"
+        }
+      ],
+      "interval": "20m",
+      "description": "Зелёная сплошная — станция, оранжевая пунктирная — модель. Время модели — время получения API в существующем сборщике. Пропуски более 45 минут разрывают линию. Ветер модели на 10 м. В текущем сборщике км/ч ошибочно подписаны м/с; здесь значения модели делятся на 3,6."
+    },
+    {
+      "id": 13,
+      "title": "Направление ветра · 0° = север",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "fillOpacity": 0,
+            "showPoints": "always",
+            "pointSize": 6,
+            "spanNulls": 2700000,
+            "insertNulls": 2700000,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "min": 0,
+          "max": 360
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Станция"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56D9C9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Open-Meteo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FFB357"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts_time AS time,value AS value,'Станция'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_direction_deg' AND $__timeFilter(ts_time) UNION ALL SELECT ts_time AS time,value AS value,'Open-Meteo'::text AS metric FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='wind_dir_10m_deg' AND $__timeFilter(ts_time) ORDER BY time"
+        }
+      ],
+      "interval": "20m",
+      "description": "Точки без линий: переход через 360°/0° не является разворотом ветра. Штиль не исключён из этого графика."
+    },
+    {
+      "id": 14,
+      "title": "Роза ветров · станция",
+      "type": "volkovlabs-echarts-panel",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "renderer": "svg",
+        "editorMode": "code",
+        "map": "none",
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "getOption": "const names=['С','ССВ','СВ','ВСВ','В','ВЮВ','ЮВ','ЮЮВ','Ю','ЮЮЗ','ЮЗ','ЗЮЗ','З','ЗСЗ','СЗ','ССЗ'];\nconst values=Array(16).fill(0); for(const f of context.panel.data.series){const a=f.fields.find(x=>x.name==='sector'),b=f.fields.find(x=>x.name==='samples'); if(a&&b)for(let i=0;i<a.values.length;i++)values[Number(a.values[i])]=Number(b.values[i]);}\nconst total=values.reduce((a,b)=>a+b,0); return {backgroundColor:'transparent',title:{text:total?'Доля измерений по направлениям':'Нет данных о ветре > 0,2 м/с',left:'center',textStyle:{fontSize:13,color:'#9fa7b3'}},tooltip:{trigger:'item',valueFormatter:v=>v.toFixed(1)+' %'},polar:{radius:'68%'},angleAxis:{type:'category',data:names,boundaryGap:false,startAngle:90,clockwise:true},radiusAxis:{axisLabel:{formatter:'{value}%'}},series:[{type:'bar',coordinateSystem:'polar',data:values.map(v=>total?100*v/total:0),itemStyle:{color:'#56D9C9'}}]};"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH v AS (SELECT ts_time, max(value) FILTER (WHERE metric='wind_direction_deg') AS direction,max(value) FILTER (WHERE metric='wind_speed_ms') AS speed FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric IN ('wind_direction_deg','wind_speed_ms') AND $__timeFilter(ts_time) GROUP BY ts_time) SELECT mod(floor((direction+11.25)/22.5)::int,16) AS sector,count(*)::double precision AS samples FROM v WHERE speed>0.2 AND direction BETWEEN 0 AND 360 GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "description": "Доля пакетов по 16 направлениям за выбранный период. Скорость ≤ 0,2 м/с исключена. При пропусках передачи это распределение пакетов, не доля времени."
+    },
+    {
+      "id": 15,
+      "title": "Расхождения за выбранный период",
+      "type": "table",
+      "gridPos": {
+        "x": 0,
+        "y": 46,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "lg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH raw AS (SELECT 'Температура' AS name, date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01') AS bucket,avg(value) AS s,NULL::double precision AS o FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_temperature_c' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Температура',date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01'),NULL::double precision,avg(value) FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='temp_c' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Влажность' AS name, date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01') AS bucket,avg(value) AS s,NULL::double precision AS o FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='relative_humidity_pct' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Влажность',date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01'),NULL::double precision,avg(value) FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='rel_humidity_pct' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Давление' AS name, date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01') AS bucket,avg(value*10) AS s,NULL::double precision AS o FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_pressure_kpa' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Давление',date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01'),NULL::double precision,avg(value) FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='surface_pressure_hpa' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Скорость ветра' AS name, date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01') AS bucket,avg(value) AS s,NULL::double precision AS o FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_speed_ms' AND $__timeFilter(ts_time) GROUP BY 2 UNION ALL SELECT 'Скорость ветра',date_bin(interval '30 minutes',ts_time,TIMESTAMPTZ '2000-01-01'),NULL::double precision,avg(value/3.6) FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='wind_speed_10m_ms' AND $__timeFilter(ts_time) GROUP BY 2), paired AS (SELECT name,bucket,max(s) AS s,max(o) AS o FROM raw GROUP BY name,bucket) SELECT name AS \"Показатель\",count(*) AS \"Пар 30 мин\",avg(s-o) AS \"Среднее Δ\",avg(abs(s-o)) AS \"MAE\",sqrt(avg(power(s-o,2))) AS \"RMSE\" FROM paired WHERE s IS NOT NULL AND o IS NOT NULL GROUP BY name ORDER BY name"
+        }
+      ],
+      "description": "Сравниваются только общие 30-минутные интервалы; внутри них среднее каждого источника. Δ = станция − модель, MAE = среднее абсолютное расхождение, RMSE = среднеквадратичное. Единицы: °C, процентные пункты, гПа, м/с. Модель не эталон калибровки."
+    },
+    {
+      "id": 16,
+      "title": "ultrasonic_weather_station_01 · прогноз на 6 / 24 часа",
+      "type": "table",
+      "gridPos": {
+        "x": 12,
+        "y": 46,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "lg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "SELECT CASE WHEN metric LIKE '%6h%' THEN '6 часов' ELSE '24 часа' END AS \"Горизонт\",max(value) FILTER (WHERE metric LIKE 'forecast_precip_%h_mm') AS \"Осадки, мм\",max(value) FILTER (WHERE metric LIKE 'forecast_temp_min_%') AS \"Мин. t, °C\",max(value) FILTER (WHERE metric LIKE 'forecast_precip_probability_%') AS \"Макс. вероятность, %\" FROM (SELECT DISTINCT ON(metric) metric,value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric LIKE 'forecast_%' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY metric,ts_time DESC,created_at DESC) v GROUP BY 1 ORDER BY 1 DESC"
+        }
+      ],
+      "description": "Полные часы со следующего часа UTC; прогноз не старше 2 часов. Максимум почасовой вероятности не равен вероятности дождя за весь период."
+    },
+    {
+      "id": 17,
+      "title": "Освещённость · станция",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 54,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lux",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "always",
+            "pointSize": 4,
+            "spanNulls": 2700000,
+            "insertNulls": 2700000,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Станция"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#56D9C9"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Open-Meteo"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#FFB357"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    5
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean",
+            "min",
+            "max"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT ts_time AS time,value AS \"Освещённость\" FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='illuminance_lux' AND $__timeFilter(ts_time) ORDER BY time"
+        }
+      ],
+      "interval": "20m"
+    },
+    {
+      "id": 18,
+      "title": "Дополнительные показания станции",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 54,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "graphMode": "none",
+        "colorMode": "value",
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT now() AS time,(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='rainfall_mm' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) s) AS \"Осадки станции, мм\",(SELECT value FROM (SELECT ts_time AS time, value AS value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='wind_force' AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1) s) AS \"Сила ветра, шкала станции\""
+        }
+      ],
+      "description": "Период накопления rainfall_mm не подтверждён, поэтому с осадками модели не сопоставляется. Отсутствующее показание не заменяется нулём."
+    },
+    {
+      "id": 19,
+      "title": "Возраст данных · оба источника",
+      "type": "stat",
+      "gridPos": {
+        "x": 12,
+        "y": 58,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2700
+              },
+              {
+                "color": "red",
+                "value": 7200
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "textMode": "value_and_name",
+        "graphMode": "none",
+        "colorMode": "background",
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "time_series",
+          "rawSql": "SELECT now() AS time,EXTRACT(EPOCH FROM(now()-(SELECT max(ts_time) FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND metric='air_temperature_c' AND ts_time<=now())))::double precision AS \"Станция\",EXTRACT(EPOCH FROM(now()-(SELECT max(ts_time) FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='temp_c' AND ts_time<=now())))::double precision AS \"Open-Meteo\""
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "title": "Как читать сравнение",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 62,
+        "w": 24,
+        "h": 5
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Единицы:** давление станции кПа × 10 → гПа. Ветер Open-Meteo в текущем сборщике приходит в км/ч с ошибочной меткой м/с; на этом дашборде применяется ÷ 3,6. При исправлении сборщика преобразование нужно согласованно обновить.\n\n**Смысл:** Open-Meteo — модель для ultrasonic_weather_station_01, ветер на высоте 10 м. Установка датчика и локальные условия влияют на разницу. Временная метка текущих данных модели — получение API. Сводные ошибки рассчитаны по общим 30-минутным интервалам.\n\n**Пропуски:** нет данных ≠ ноль. Осадки станции не сопоставляются с моделью без известного периода накопления. [Open-Meteo](https://open-meteo.com/en/docs) · [Возможности графиков Grafana](https://grafana.com/docs/grafana/latest/visualizations/panels-visualizations/visualizations/time-series/)"
+      }
+    },
+    {
+      "id": 21,
+      "title": "Погода сейчас · станция и Open-Meteo",
+      "type": "volkovlabs-echarts-panel",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 7
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "timescale"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "noValue": "Нет данных",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "renderer": "svg",
+        "editorMode": "code",
+        "map": "none",
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "getOption": "// Business Charts 6.6 / Grafana 11.2. No external images or browser API calls.\n// Codes: https://open-meteo.com/en/docs#weathervariables\nconst fields = context.panel.data.series.flatMap(frame => frame.fields);\nconst get = name => {\n  const field = fields.find(f => f.name === name);\n  if (!field || !field.values.length) return null;\n  return field.values[0] ?? null;\n};\nconst numeric = name => {\n  const value = get(name);\n  return value === null || value === '' || !Number.isFinite(Number(value)) ? null : Number(value);\n};\nconst code = numeric('weather_code');\nconst day = numeric('is_day');\nconst age = numeric('age_seconds');\nconst fresh = age !== null && age >= 0 && age <= 7200;\nconst codes = {\n  0: ['Ясно', 'clear'], 1: ['Преимущественно ясно', 'mostly'],\n  2: ['Переменная облачность', 'partly'], 3: ['Пасмурно', 'cloud'],\n  45: ['Туман', 'fog'], 48: ['Туман с изморозью', 'fog'],\n  51: ['Слабая морось', 'drizzle'], 53: ['Морось', 'drizzle'],\n  55: ['Сильная морось', 'drizzle'], 56: ['Слабая переохлаждённая морось', 'ice'],\n  57: ['Сильная переохлаждённая морось', 'ice'],\n  61: ['Небольшой дождь', 'rain'], 63: ['Дождь', 'rain'], 65: ['Сильный дождь', 'rain'],\n  66: ['Слабый переохлаждённый дождь', 'ice'], 67: ['Сильный переохлаждённый дождь', 'ice'],\n  71: ['Небольшой снег', 'snow'], 73: ['Снег', 'snow'], 75: ['Сильный снег', 'snow'],\n  77: ['Снежные зёрна', 'snow'], 80: ['Небольшой ливень', 'rain'],\n  81: ['Ливень', 'rain'], 82: ['Сильный ливень', 'rain'],\n  85: ['Небольшой снежный ливень', 'snow'], 86: ['Сильный снежный ливень', 'snow'],\n  95: ['Гроза', 'storm'], 96: ['Гроза с небольшим градом', 'hail'],\n  97: ['Сильная гроза', 'storm'], 99: ['Гроза с сильным градом', 'hail'],\n};\nconst known = fresh && code !== null && Object.hasOwn(codes, code);\nlet [label, kind] = known ? codes[code] : ['Нет свежих данных', 'unknown'];\nif (fresh && code !== null && !known) label = 'Состояние не определено';\nif (known && code === 0 && day === 1) label = 'Солнечно';\nif (known && code === 0 && day === 0) label = 'Ясная ночь';\nconst dark = context.grafana.theme.isDark;\nconst foreground = dark ? '#edf5ff' : '#172b4d';\nconst muted = dark ? '#a4b6cd' : '#506582';\nconst cloudColor = dark ? '#dceafb' : '#7796b7';\nconst accent = ['clear', 'mostly'].includes(kind) ? '#ffcf5c' : '#6dc9ff';\nconst shapes = [];\nconst circle = (cx, cy, r, fill) => ({type:'circle', shape:{cx,cy,r}, style:{fill}});\nconst line = (x1,y1,x2,y2,stroke,width=5) => ({type:'line', shape:{x1,y1,x2,y2}, style:{stroke,lineWidth:width,lineCap:'round'}});\nfunction sun() {\n  for (let i=0;i<8;i++) {\n    const a=i*Math.PI/4;\n    shapes.push(line(62+36*Math.cos(a),58+36*Math.sin(a),62+48*Math.cos(a),58+48*Math.sin(a),'#ffcf5c',5));\n  }\n  shapes.push(circle(62,58,26,'#ffcf5c'));\n}\nfunction moon() {\n  // Polygon crescent: graphic panels do not accept SVG pathData directly.\n  const points = [];\n  for (let i=0;i<=40;i++) {\n    const a=-Math.PI/2-i*Math.PI/40;\n    points.push([80+42*Math.cos(a),58+42*Math.sin(a)]);\n  }\n  for (let i=0;i<=40;i++) {\n    const t=i/40;\n    points.push([80-25*Math.sin(Math.PI*t),100-84*t]);\n  }\n  shapes.push({type:'polygon',shape:{points},style:{fill:'#c4d9ff'}});\n  shapes.push(circle(118,31,3,'#e8f1ff'),circle(134,56,2,'#e8f1ff'));\n}\nfunction cloud() {\n  shapes.push(circle(33,86,25,cloudColor),circle(65,69,34,cloudColor),circle(110,84,27,cloudColor));\n  shapes.push({type:'rect',shape:{x:32,y:82,width:80,height:29,r:4},style:{fill:cloudColor}});\n}\nfunction snowflake(x,y) {\n  for (let i=0;i<3;i++) {\n    const a=i*Math.PI/3;\n    shapes.push(line(x-7*Math.cos(a),y-7*Math.sin(a),x+7*Math.cos(a),y+7*Math.sin(a),'#b0e9ff',2.5));\n  }\n}\nif (['clear','mostly','partly'].includes(kind)) {\n  if (day === 0) moon();\n  else if (day === 1) sun();\n  else shapes.push(circle(65,57,29,'#b5c9e2')); // Day/night is unknown: neutral disc.\n}\nif (!['clear','unknown'].includes(kind)) cloud();\nif (kind === 'fog') {\n  for (let i=0;i<3;i++) shapes.push(line(18+i*7,120+i*13,134-i*9,120+i*13,'#a8bed4',6));\n}\nif (['rain','ice','drizzle'].includes(kind)) {\n  for (let i=0;i<4;i++) {\n    const x=35+i*26;\n    if (kind==='drizzle') shapes.push(circle(x,128+(i%2)*10,3,'#6dc9ff'));\n    else shapes.push(line(x,123,x-7,140,'#6dc9ff',5));\n  }\n  if (kind==='ice') snowflake(131,145);\n}\nif (kind==='snow') for (let i=0;i<3;i++) snowflake(39+i*34,132+(i%2)*10);\nif (['storm','hail'].includes(kind)) {\n  shapes.push({type:'polygon',shape:{points:[[79,98],[59,129],[78,129],[66,158],[103,118],[84,118],[97,98]]},style:{fill:'#ffcf5c'}});\n  if (kind==='hail') shapes.push(circle(32,132,5,'#b0e9ff'),circle(126,136,5,'#b0e9ff'));\n}\nif (kind==='unknown') {\n  shapes.push(circle(80,78,46,dark?'#24354b':'#e2eaf4'));\n  shapes.push({type:'text',style:{x:80,y:80,text:'?',fill:muted,font:'600 54px sans-serif',align:'center',verticalAlign:'middle'}});\n}\n// Model condition and physical station readings stay independent, including gaps.\nconst width = context.panel.chart.getWidth();\nconst height = context.panel.chart.getHeight();\nconst wide = width >= 1100;\nconst narrow = width < 600;\nconst modelWidth = wide ? Math.min(650, width * 0.38) : width;\nconst iconSize = wide ? Math.min(height-35,150) : 64;\nconst modelMiddle = wide ? height/2 : 41;\nconst textX = iconSize + (wide ? 30 : 20);\nconst textWidth = Math.max(80, modelWidth-textX-18);\nconst titleSize = Math.max(14, Math.min(wide ? 32 : 22,textWidth/(label.length*0.57)));\nconst graphic = [];\nconst text = (x,y,value,size,color,weight=400,maxWidth=width-x-12) => ({type:'text',silent:true,style:{x,y,text:value,fill:color,font:`${weight} ${size}px sans-serif`,verticalAlign:'middle',width:maxWidth,overflow:'truncate'}});\ngraphic.push({type:'rect',silent:true,shape:{x:0,y:0,width,height,r:12},style:{fill:dark?'#132237':'#eff6ff'}});\ngraphic.push({type:'group',silent:true,x:12,y:modelMiddle-iconSize/2,scaleX:iconSize/170,scaleY:iconSize/170,children:shapes});\nconst phase = day===1?'День':day===0?'Ночь':'День / ночь: нет данных';\nconst time = get('updated_msk');\nconst subtitle = known ? `${phase} · ${time || '—'} МСК` : 'Нет свежего состояния Open-Meteo';\nif (wide) graphic.push(text(textX,modelMiddle-60,'СОСТОЯНИЕ · OPEN-METEO',12,'#FFB357',600,textWidth));\ngraphic.push(text(textX,modelMiddle-(wide?20:12),label,titleSize,foreground,600,textWidth));\ngraphic.push(text(textX,modelMiddle+(wide?18:10),subtitle,wide?13:10,muted,400,textWidth));\ngraphic.push(text(textX,modelMiddle+(wide?43:26),'Open-Meteo · ultrasonic_weather_station_01',wide?12:10,muted,400,textWidth));\nconst metrics = [\n  ['temperature_c','Температура','°C'],\n  ['humidity_pct','Влажность','%'],\n  ['pressure_hpa','Давление','гПа'],\n  ['wind_speed_ms','Скорость ветра','м/с'],\n];\nconst startX = wide ? modelWidth+16 : 12;\nconst columns = narrow ? 2 : 4;\nconst cellWidth = (width-startX-12)/columns;\nconst startY = wide ? 64 : 112;\nconst rowHeight = narrow ? Math.max(62,(height-startY+14)/2) : 88;\ngraphic.push(text(startX,wide?28:91,'РЕАЛЬНЫЕ ПОКАЗАНИЯ СТАНЦИИ',wide?13:11,'#56D9C9',600));\nfor (let i=0;i<metrics.length;i++) {\n  const [key,title,unit] = metrics[i];\n  const value = numeric(key);\n  const updated = get(`${key}_updated`);\n  const x = startX+(i%columns)*cellWidth;\n  const y = startY+Math.floor(i/columns)*rowHeight;\n  const pad = wide ? 10 : 4;\n  if (wide && i>0) graphic.push(line(x-8,55,x-8,height-40,dark?'#294057':'#cddded',1));\n  const display = value === null ? 'Нет данных' : `${value.toLocaleString('ru-RU',{minimumFractionDigits:1,maximumFractionDigits:1})} ${unit}`;\n  const valueSize = Math.max(14,Math.min(wide?36:25,(cellWidth-pad-12)/(display.length*0.59)));\n  graphic.push(text(x+pad,y,title,wide?14:12,muted,400,cellWidth-pad-12));\n  graphic.push(text(x+pad,y+(wide?44:25),display,valueSize,value===null?muted:'#56D9C9',600,cellWidth-pad-12));\n  graphic.push(text(x+pad,y+(wide?80:47),value===null?'Нет измерения ≤ 2 ч':`${updated || '—'} МСК`,wide?12:10,muted,400,cellWidth-pad-12));\n}\nif (wide) graphic.push(text(startX,height-19,'ultrasonic_weather_station_01 · измерения датчиков',11,muted));\nreturn {animation:false,backgroundColor:'transparent',tooltip:{show:false},graphic};\n"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "timescale"
+          },
+          "rawQuery": true,
+          "editorMode": "code",
+          "format": "table",
+          "rawSql": "WITH station_latest AS (\n        SELECT DISTINCT ON(metric) metric,value,ts_time FROM public.unit_node_metrics\n        WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='sensor' AND ts_time BETWEEN now()-interval '2 hours' AND now()\n          AND metric IN ('air_temperature_c','relative_humidity_pct','air_pressure_kpa','wind_speed_ms')\n        ORDER BY metric,ts_time DESC,created_at DESC\n    ), readings AS (SELECT max(value) FILTER (WHERE metric='air_temperature_c') AS temperature_c, to_char(max(ts_time) FILTER (WHERE metric='air_temperature_c') AT TIME ZONE 'Europe/Moscow','DD.MM HH24:MI') AS temperature_c_updated, max(value) FILTER (WHERE metric='relative_humidity_pct') AS humidity_pct, to_char(max(ts_time) FILTER (WHERE metric='relative_humidity_pct') AT TIME ZONE 'Europe/Moscow','DD.MM HH24:MI') AS humidity_pct_updated, max(value*10) FILTER (WHERE metric='air_pressure_kpa') AS pressure_hpa, to_char(max(ts_time) FILTER (WHERE metric='air_pressure_kpa') AT TIME ZONE 'Europe/Moscow','DD.MM HH24:MI') AS pressure_hpa_updated, max(value) FILTER (WHERE metric='wind_speed_ms') AS wind_speed_ms, to_char(max(ts_time) FILTER (WHERE metric='wind_speed_ms') AT TIME ZONE 'Europe/Moscow','DD.MM HH24:MI') AS wind_speed_ms_updated FROM station_latest),\n    code AS (SELECT ts_time,value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='weather_code'\n             AND ts_time BETWEEN now()-interval '2 hours' AND now() ORDER BY ts_time DESC,created_at DESC LIMIT 1)\n    SELECT readings.*,code.value AS weather_code,day.value AS is_day,\n           EXTRACT(EPOCH FROM(now()-code.ts_time))::double precision AS age_seconds,\n           to_char(code.ts_time AT TIME ZONE 'Europe/Moscow','DD.MM HH24:MI') AS updated_msk\n    FROM readings LEFT JOIN code ON true\n    LEFT JOIN LATERAL (SELECT value FROM public.unit_node_metrics WHERE tenant='basis' AND region='vostochnoe' AND fleet='first_pear_nursery' AND unit_id='ultrasonic_weather_station_01' AND node_id='open-meteo' AND metric='is_day'\n                       AND ts_time=code.ts_time ORDER BY created_at DESC LIMIT 1) day ON true"
+        }
+      ],
+      "description": "Значок и описание погоды — модель Open-Meteo ultrasonic_weather_station_01. Температура, влажность, давление и ветер — реальные показания ultrasonic_weather_station_01 (sensor). Источники и время показаны раздельно. Каждая метрика выбирается независимо за последние 2 часа; отсутствующие значения не подменяются моделью. Давление станции: кПа × 10 = гПа."
+    }
+  ],
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "liveNow": false
+}

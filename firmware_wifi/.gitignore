@@ -1,0 +1,8 @@
+/target
+/.embuild
+*.bin
+*.elf
+device.env
+/devices/*.env
+/tools/
+*.swp

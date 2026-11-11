@@ -1,0 +1,605 @@
+{
+  "uid": "ultrasonic-weather-station",
+  "title": "[kraftrobotics] s_posad / 189 — ultrasonic_weather_station_01",
+  "description": "Метеостанция: круговой компас со сторонами света и стрелкой по углу датчика. При 0° стрелка направлена на север, включая штиль.",
+  "tags": [
+    "tenant:kraftrobotics",
+    "region:s_posad",
+    "fleet:189",
+    "sensor:ultrasonic_weather_station_01",
+    "wifi",
+    "weather",
+    "indoor"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "volkovlabs-echarts-panel",
+      "title": "НАПРАВЛЕНИЕ",
+      "description": "Север сверху, восток справа. Стрелка показывает угол датчика, в том числе 0° на север при штиле. В центре — скорость ветра.",
+      "gridPos": {
+        "h": 12,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (SELECT DISTINCT ON (metric) metric, value FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric IN ('wind_speed_ms','wind_direction_deg') ORDER BY metric, created_at DESC) SELECT max(value) FILTER (WHERE metric='wind_speed_ms')::double precision AS wind_speed_ms, max(value) FILTER (WHERE metric='wind_direction_deg')::double precision AS wind_direction_deg FROM latest"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "renderer": "svg",
+        "editorMode": "code",
+        "map": "none",
+        "themeEditor": {
+          "name": "default",
+          "config": "{}"
+        },
+        "getOption": "// Business Charts 6.6: responsive wind compass, north fixed at the top.\n// The arrow points to the station's bearing, including 0 degrees at zero speed.\nconst latest = (name) => {\n  for (const frame of context.panel.data.series) {\n    const field = frame.fields.find((item) => item.name === name);\n    if (!field) continue;\n    const value = field.values[field.values.length - 1];\n    if (value !== null && value !== undefined && Number.isFinite(Number(value))) return Number(value);\n  }\n  return null;\n};\nconst speed = latest('wind_speed_ms');\nconst rawDirection = latest('wind_direction_deg');\nconst direction = rawDirection === null ? null : ((rawDirection % 360) + 360) % 360;\nconst width = context.panel.chart.getWidth();\nconst height = context.panel.chart.getHeight();\nconst radius = Math.max(12, Math.min(width / 2.7, height / 3.15));\nconst cx = width / 2;\nconst cy = height / 2 - radius * 0.10;\nconst dark = context.grafana.theme.isDark;\nconst foreground = dark ? '#f0f7ff' : '#163651';\nconst muted = dark ? '#91b9dc' : '#406888';\nconst dial = dark ? '#172e45' : '#e7f2fb';\nconst elements = [];\nconst line = (x1, y1, x2, y2, stroke, lineWidth) => ({\n  type: 'line', silent: true, shape: { x1, y1, x2, y2 }, style: { stroke, lineWidth, lineCap: 'round' },\n});\nconst text = (x, y, value, size, color, weight = 600) => ({\n  type: 'text', silent: true, style: {\n    x, y, text: value, fill: color, font: `${weight} ${size}px sans-serif`, align: 'center', verticalAlign: 'middle',\n  },\n});\nelements.push({ type: 'circle', silent: true, shape: { cx, cy, r: radius }, style: { fill: dial, stroke: muted, lineWidth: 1, opacity: 0.65 } });\nfor (let tick = 0; tick < 72; tick++) {\n  const angle = tick * Math.PI / 36;\n  const major = tick % 18 === 0;\n  const inner = radius * (major ? 0.84 : tick % 3 === 0 ? 0.89 : 0.94);\n  elements.push(line(cx + inner * Math.sin(angle), cy - inner * Math.cos(angle),\n    cx + radius * Math.sin(angle), cy - radius * Math.cos(angle), muted, major ? 2.5 : 1));\n}\nconst labelSize = Math.max(12, Math.min(26, radius * 0.18));\nfor (const [label, x, y] of [['С', 0, -1.17], ['В', 1.17, 0], ['Ю', 0, 1.17], ['З', -1.17, 0]]) {\n  elements.push(text(cx + x * radius, cy + y * radius, label, labelSize, foreground));\n}\nif (direction !== null) {\n  const angle = direction * Math.PI / 180;\n  const dx = Math.sin(angle), dy = -Math.cos(angle);\n  const tipX = cx + dx * radius * 0.78, tipY = cy + dy * radius * 0.78;\n  const tailX = cx - dx * radius * 0.78, tailY = cy - dy * radius * 0.78;\n  elements.push(line(tailX, tailY, tipX, tipY, foreground, Math.max(2, radius * 0.025)));\n  const backX = tipX - dx * radius * 0.13, backY = tipY - dy * radius * 0.13;\n  elements.push({ type: 'polygon', silent: true, shape: { points: [\n    [tipX, tipY], [backX - dy * radius * 0.065, backY + dx * radius * 0.065],\n    [backX + dy * radius * 0.065, backY - dx * radius * 0.065],\n  ] }, style: { fill: foreground } });\n  elements.push({ type: 'circle', silent: true, shape: { cx: tailX, cy: tailY, r: radius * 0.045 }, style: { fill: foreground } });\n}\nelements.push({ type: 'circle', silent: true, shape: { cx, cy, r: radius * 0.34 }, style: { fill: dial } });\nconst numberSize = Math.max(15, Math.min(48, radius * 0.30));\nconst speedText = speed === null ? '—' : speed.toLocaleString('ru-RU', { maximumFractionDigits: 1 });\nelements.push(text(cx, cy - radius * 0.07, speedText, numberSize, foreground, 700));\nelements.push(text(cx, cy + radius * 0.17, 'м/с', Math.max(10, numberSize * 0.55), foreground));\nelements.push(text(cx, cy + radius * 1.47, direction === null ? 'Нет направления' : `${Math.round(direction) % 360}°`, labelSize, muted));\nreturn { animation: false, backgroundColor: 'transparent', tooltip: { show: false }, graphic: elements };\n"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "ВЕТЕР",
+      "description": "Показания ниже 0,1 м/с отображаются как штиль.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Скорость ветра\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='wind_speed_ms' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocityms",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#53d8c7",
+                "value": null
+              },
+              {
+                "color": "#ffbd69",
+                "value": 5
+              },
+              {
+                "color": "#ff7777",
+                "value": 12
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "range",
+              "options": {
+                "from": 0,
+                "to": 0.1,
+                "result": {
+                  "text": "ШТИЛЬ"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "ТЕМПЕРАТУРА",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 13
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Температура\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='air_temperature_c' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#ff9a76"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "ВЛАЖНОСТЬ",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 13
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Влажность\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='relative_humidity_pct' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#65a9ff"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "ДАВЛЕНИЕ",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Давление\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='air_pressure_kpa' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pressurekpa",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#b391ff"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "ОСВЕЩЁННОСТЬ",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 18
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Освещённость\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='illuminance_lux' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lux",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#f4cf68"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "ПОГОДА · за сутки",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 23
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, metric, value FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric IN ('wind_speed_ms','air_temperature_c','relative_humidity_pct','air_pressure_kpa','illuminance_lux','rainfall_mm') AND $__timeFilter(created_at) ORDER BY created_at"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "showPoints": "never",
+            "spanNulls": false
+          },
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "ОСАДКИ · показание датчика",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 31
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS time, COALESCE((SELECT value FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='rainfall_mm' ORDER BY created_at DESC LIMIT 1), 0)::double precision AS \"Осадки\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "lengthmm",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#65a9ff"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 9,
+      "type": "stat",
+      "title": "СИЛА ВЕТРА · шкала станции",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 4
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Сила ветра\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='wind_force' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53d8c7"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "ПОСЛЕДНИЙ ПАКЕТ",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 31
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS time, EXTRACT(EPOCH FROM (now() - max(created_at)))::double precision AS \"Возраст пакета\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#53d8c7",
+                "value": null
+              },
+              {
+                "color": "#ffbd69",
+                "value": 1500
+              },
+              {
+                "color": "#ff7777",
+                "value": 3600
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "НАПРАВЛЕНИЕ",
+      "description": "Угол в градусах; компас справа показывает стороны света.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 8
+      },
+      "datasource": {
+        "type": "postgres",
+        "uid": "timescale"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at AS time, value AS \"Направление\" FROM public.unit_node_metrics WHERE tenant='kraftrobotics' AND region='s_posad' AND fleet='189' AND unit_id='ultrasonic_weather_station_01' AND metric='wind_direction_deg' ORDER BY created_at DESC LIMIT 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "degree",
+          "decimals": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#53d8c7"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center"
+      }
+    }
+  ],
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "liveNow": false
+}

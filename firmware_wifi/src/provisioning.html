@@ -1,0 +1,34 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Настройка метеостанции</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0f1117;color:#eef1f7;font:16px system-ui,-apple-system,sans-serif}.wrap{max-width:520px;margin:auto;padding:24px 16px}.brand{text-align:center;margin:18px 0 24px}.logo{font-size:54px}.brand h1{margin:6px 0;font-size:26px}.muted{color:#9ba3b5}.card{background:#1e2130;border:1px solid #303548;border-radius:14px;padding:20px;box-shadow:0 12px 32px #0004}label{display:block;margin:15px 0 7px;font-weight:600}input{width:100%;padding:13px;border:1px solid #42485d;border-radius:9px;background:#141721;color:#fff;font-size:16px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}button{width:100%;margin-top:20px;padding:14px;border:0;border-radius:9px;background:#45b778;color:#07150d;font-size:16px;font-weight:750;cursor:pointer}button.secondary{margin-top:10px;background:#303548;color:#eef1f7}button:disabled{opacity:.6}.hint{font-size:13px;line-height:1.45;margin-top:16px}.status{display:none;margin-top:15px;padding:12px;border-radius:9px;background:#172a21;color:#8ee6b4}</style></head><body><main class="wrap"><div class="brand"><div class="logo">🌱</div><h1>Метеостанция</h1><div class="muted">Wi‑Fi и местоположение станции</div></div><section class="card"><form id="f" method="post" action="/save" enctype="application/x-www-form-urlencoded"><label for="ssid">Имя сети (SSID)</label><input id="ssid" name="ssid" maxlength="32" autocomplete="off" required><label for="password">Пароль</label><input id="password" name="password" type="password" maxlength="64" autocomplete="current-password"><div class="row"><div><label for="latitude">Широта</label><input id="latitude" name="latitude" type="text" inputmode="decimal" maxlength="16" placeholder="55,7558000" required></div><div><label for="longitude">Долгота</label><input id="longitude" name="longitude" type="text" inputmode="decimal" maxlength="17" placeholder="37,6176000" required></div></div><button class="secondary" id="locate" type="button">Определить координаты телефона</button><button type="submit">Проверить и сохранить</button></form><div id="status" class="status"></div><p class="muted hint">Координаты сохраняются вместе с настройками и добавляются к телеметрии. Если настройки Wi-Fi отсутствуют, контроллер откроет точку доступа для настройки. </p></section></main><script>
+const form=document.getElementById('f');
+const statusBox=document.getElementById('status');
+document.getElementById('locate').addEventListener('click',()=>{
+  statusBox.style.display='block';
+  if(!navigator.geolocation){statusBox.textContent='Геолокация браузером недоступна. Введите координаты вручную.';return;}
+  statusBox.textContent='Определяем местоположение…';
+  navigator.geolocation.getCurrentPosition(position=>{
+    document.getElementById('latitude').value=position.coords.latitude.toFixed(7);
+    document.getElementById('longitude').value=position.coords.longitude.toFixed(7);
+    statusBox.textContent='Координаты заполнены. Проверьте их и сохраните настройки.';
+  },()=>{statusBox.textContent='Не удалось определить местоположение. Введите координаты вручную.';},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+});
+form.addEventListener('submit',event=>{
+  for(const id of ['latitude','longitude']){
+    const input=document.getElementById(id);
+    input.value=input.value.trim().replace(',', '.');
+  }
+  const latitude=Number(document.getElementById('latitude').value);
+  const longitude=Number(document.getElementById('longitude').value);
+  if(!Number.isFinite(latitude)||latitude < -90||latitude > 90||
+     !Number.isFinite(longitude)||longitude < -180||longitude > 180){
+    event.preventDefault();
+    statusBox.style.display='block';
+    statusBox.textContent='Проверьте координаты: широта от −90 до 90, долгота от −180 до 180.';
+    return;
+  }
+  const button=form.querySelector('button[type="submit"]');
+  button.disabled=true;
+  statusBox.style.display='block';
+  statusBox.textContent='Отправляем настройки…';
+});
+</script></body></html>
